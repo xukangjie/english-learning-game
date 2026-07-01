@@ -1,0 +1,1527 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Little Word Garden</title>
+  <style>
+    :root {
+      --bg-a: #fff7d6;
+      --bg-b: #dff7ff;
+      --surface: rgba(255, 255, 255, 0.86);
+      --surface-strong: #ffffff;
+      --ink: #263238;
+      --muted: #667085;
+      --primary: #2f80ed;
+      --primary-dark: #1d62bd;
+      --accent: #ff8a65;
+      --accent-2: #66bb6a;
+      --soft: #f3f7fb;
+      --line: rgba(38, 50, 56, 0.12);
+      --shadow: 0 18px 45px rgba(35, 49, 75, 0.14);
+      --radius: 8px;
+      --theme-mark: "🌼";
+    }
+
+    [data-skin="princess"] {
+      --bg-a: #ffe8f3;
+      --bg-b: #e9f5d7;
+      --primary: #c85a9f;
+      --primary-dark: #9e3d79;
+      --accent: #f6b84b;
+      --accent-2: #7fc96f;
+      --theme-mark: "👑";
+    }
+
+    [data-skin="space"] {
+      --bg-a: #17233f;
+      --bg-b: #2b6cb0;
+      --surface: rgba(255, 255, 255, 0.9);
+      --primary: #4fd1c5;
+      --primary-dark: #2c9a91;
+      --accent: #f6c85f;
+      --accent-2: #9f7aea;
+      --theme-mark: "🚀";
+    }
+
+    [data-skin="ocean"] {
+      --bg-a: #d7fbff;
+      --bg-b: #b7e4c7;
+      --primary: #168aad;
+      --primary-dark: #106a85;
+      --accent: #ffb4a2;
+      --accent-2: #52b788;
+      --theme-mark: "🐚";
+    }
+
+    [data-skin="magiccat"] {
+      --bg-a: #fff1c9;
+      --bg-b: #e8dbff;
+      --primary: #7b61ff;
+      --primary-dark: #5b43c9;
+      --accent: #ff9f1c;
+      --accent-2: #3ecf8e;
+      --theme-mark: "🐱";
+    }
+
+    [data-skin="dino"] {
+      --bg-a: #e9f8cf;
+      --bg-b: #ffd6a5;
+      --primary: #2d9c6a;
+      --primary-dark: #20784f;
+      --accent: #e76f51;
+      --accent-2: #4d96ff;
+      --theme-mark: "🦕";
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      font-family: ui-rounded, "SF Pro Rounded", "Nunito", "Avenir Next", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(255, 255, 255, 0.65), transparent 34rem),
+        linear-gradient(135deg, var(--bg-a), var(--bg-b));
+    }
+
+    body::before {
+      content: var(--theme-mark);
+      position: fixed;
+      right: 3vw;
+      bottom: 2vh;
+      z-index: -1;
+      font-size: clamp(5rem, 14vw, 11rem);
+      opacity: 0.16;
+      transform: rotate(-10deg);
+    }
+
+    button,
+    select {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+      border-radius: var(--radius);
+      min-height: 48px;
+      padding: 0.85rem 1rem;
+      color: var(--ink);
+      background: var(--surface-strong);
+      box-shadow: 0 2px 0 rgba(38, 50, 56, 0.14);
+      cursor: pointer;
+      transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(35, 49, 75, 0.14);
+    }
+
+    button:active {
+      transform: translateY(1px);
+      box-shadow: 0 1px 0 rgba(38, 50, 56, 0.12);
+    }
+
+    button:focus-visible {
+      outline: 4px solid rgba(47, 128, 237, 0.26);
+      outline-offset: 2px;
+    }
+
+    .app {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 18px 0 28px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .brand-mark {
+      display: grid;
+      place-items: center;
+      width: 46px;
+      height: 46px;
+      border-radius: var(--radius);
+      background: var(--surface-strong);
+      box-shadow: var(--shadow);
+      font-size: 1.45rem;
+    }
+
+    h1,
+    h2,
+    h3,
+    p {
+      margin: 0;
+    }
+
+    h1 {
+      font-size: clamp(1.4rem, 2.8vw, 2.2rem);
+      line-height: 1.05;
+    }
+
+    h2 {
+      font-size: clamp(1.25rem, 2.2vw, 1.7rem);
+      line-height: 1.15;
+    }
+
+    h3 {
+      font-size: 1rem;
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    .player-switch {
+      display: flex;
+      gap: 8px;
+      padding: 6px;
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, 0.5);
+      border: 1px solid var(--line);
+    }
+
+    .player-switch button {
+      min-height: 40px;
+      padding: 0.55rem 0.9rem;
+      box-shadow: none;
+      background: transparent;
+      color: var(--muted);
+      font-weight: 800;
+    }
+
+    .player-switch button.active {
+      background: var(--surface-strong);
+      color: var(--ink);
+      box-shadow: 0 6px 16px rgba(35, 49, 75, 0.1);
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 1.05fr 0.95fr;
+      gap: 18px;
+      align-items: stretch;
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid rgba(255, 255, 255, 0.78);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(14px);
+    }
+
+    .main-panel {
+      min-height: 580px;
+      padding: clamp(18px, 3vw, 30px);
+    }
+
+    .side-panel {
+      padding: clamp(16px, 2.4vw, 24px);
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .stat {
+      min-height: 86px;
+      padding: 14px;
+      border-radius: var(--radius);
+      background: var(--surface-strong);
+      border: 1px solid var(--line);
+    }
+
+    .stat strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: clamp(1.25rem, 3vw, 1.9rem);
+      line-height: 1;
+    }
+
+    .stat span {
+      display: block;
+      color: var(--muted);
+      font-weight: 700;
+      font-size: 0.9rem;
+    }
+
+    .mode-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 20px;
+    }
+
+    .mode-button {
+      display: grid;
+      gap: 10px;
+      min-height: 150px;
+      padding: 18px;
+      text-align: left;
+      background: var(--surface-strong);
+      border: 1px solid var(--line);
+    }
+
+    .mode-button .big-icon {
+      font-size: 2.4rem;
+      line-height: 1;
+    }
+
+    .mode-button strong {
+      font-size: 1.28rem;
+    }
+
+    .scene-row,
+    .toolbar,
+    .word-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .scene-row {
+      margin-top: 16px;
+    }
+
+    .chip {
+      min-height: 38px;
+      padding: 0.48rem 0.75rem;
+      border: 1px solid var(--line);
+      box-shadow: none;
+      color: var(--muted);
+      font-weight: 800;
+      background: rgba(255, 255, 255, 0.7);
+    }
+
+    .chip.active {
+      color: white;
+      background: var(--primary);
+      border-color: transparent;
+    }
+
+    .primary {
+      color: white;
+      background: var(--primary);
+      box-shadow: 0 5px 0 var(--primary-dark);
+      font-weight: 900;
+    }
+
+    .primary:hover {
+      box-shadow: 0 8px 18px rgba(47, 128, 237, 0.26);
+    }
+
+    .accent {
+      color: #382814;
+      background: #ffd166;
+      box-shadow: 0 5px 0 #d9a93b;
+      font-weight: 900;
+    }
+
+    .soft {
+      background: var(--soft);
+      color: var(--ink);
+      border: 1px solid var(--line);
+      box-shadow: none;
+      font-weight: 800;
+    }
+
+    .danger {
+      color: #9a3412;
+      background: #ffedd5;
+      border: 1px solid #fed7aa;
+      box-shadow: none;
+      font-weight: 800;
+    }
+
+    .word-card {
+      display: grid;
+      place-items: center;
+      min-height: 330px;
+      margin: 18px 0;
+      padding: 24px;
+      border-radius: var(--radius);
+      background: var(--surface-strong);
+      border: 1px solid var(--line);
+      text-align: center;
+    }
+
+    .visual {
+      display: grid;
+      place-items: center;
+      width: min(100%, 320px);
+      aspect-ratio: 1;
+      margin: 0 auto;
+    }
+
+    .word-image {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: var(--radius);
+      border: 1px solid var(--line);
+      background: #fff;
+      box-shadow: 0 12px 26px rgba(35, 49, 75, 0.12);
+    }
+
+    .word-image.is-hidden,
+    .emoji.is-hidden {
+      display: none;
+    }
+
+    .emoji {
+      font-size: clamp(5rem, 13vw, 10rem);
+      line-height: 1;
+      filter: drop-shadow(0 10px 12px rgba(35, 49, 75, 0.12));
+    }
+
+    .word {
+      margin-top: 14px;
+      font-size: clamp(2rem, 5vw, 4.2rem);
+      line-height: 1;
+      font-weight: 950;
+      text-transform: lowercase;
+    }
+
+    .pronunciation {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: clamp(1.05rem, 2.2vw, 1.45rem);
+      font-weight: 900;
+    }
+
+    .category-line {
+      margin-top: 12px;
+      color: var(--muted);
+      font-weight: 800;
+    }
+
+    .result {
+      min-height: 34px;
+      margin-top: 8px;
+      color: var(--primary-dark);
+      font-weight: 900;
+      font-size: 1.05rem;
+    }
+
+    .action-grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .choice-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin: 18px 0;
+    }
+
+    .choice {
+      min-height: 210px;
+      display: grid;
+      place-items: center;
+      gap: 10px;
+      background: var(--surface-strong);
+      border: 2px solid transparent;
+    }
+
+    .choice .emoji {
+      font-size: clamp(3.8rem, 8vw, 6.2rem);
+    }
+
+    .choice .visual {
+      width: min(100%, 150px);
+    }
+
+    .choice-word {
+      display: grid;
+      gap: 4px;
+      text-align: center;
+    }
+
+    .choice-word strong {
+      font-size: clamp(1.05rem, 2vw, 1.35rem);
+      line-height: 1;
+      text-transform: lowercase;
+    }
+
+    .choice-word span {
+      color: var(--muted);
+      font-size: 0.88rem;
+      font-weight: 850;
+    }
+
+    .choice.correct {
+      border-color: var(--accent-2);
+      background: #ecfdf3;
+    }
+
+    .choice.needs-try {
+      border-color: #ffd166;
+      background: #fff8dc;
+    }
+
+    .progress-line {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+      color: var(--muted);
+      font-weight: 800;
+    }
+
+    .meter {
+      overflow: hidden;
+      height: 13px;
+      border-radius: 999px;
+      background: rgba(38, 50, 56, 0.12);
+    }
+
+    .meter-fill {
+      height: 100%;
+      width: 0%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--accent), var(--primary));
+      transition: width 0.22s ease;
+    }
+
+    .small-section {
+      margin-top: 20px;
+    }
+
+    .skin-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .skin-card {
+      min-height: 120px;
+      padding: 14px;
+      text-align: left;
+      background: var(--surface-strong);
+      border: 1px solid var(--line);
+    }
+
+    .skin-card .skin-icon {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 2rem;
+    }
+
+    .skin-card.current {
+      border-color: var(--primary);
+      outline: 3px solid rgba(47, 128, 237, 0.14);
+    }
+
+    .skin-card.locked {
+      opacity: 0.72;
+    }
+
+    .summary {
+      display: grid;
+      gap: 16px;
+      text-align: center;
+      align-content: center;
+      min-height: 460px;
+    }
+
+    .summary-icon {
+      font-size: clamp(5rem, 13vw, 9rem);
+      line-height: 1;
+    }
+
+    .summary h2 {
+      font-size: clamp(2rem, 5vw, 4rem);
+    }
+
+    .mini-list {
+      display: grid;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .mini-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 12px;
+      border-radius: var(--radius);
+      background: var(--surface-strong);
+      border: 1px solid var(--line);
+      font-weight: 800;
+    }
+
+    .empty {
+      padding: 18px;
+      border-radius: var(--radius);
+      color: var(--muted);
+      background: rgba(255, 255, 255, 0.64);
+      border: 1px dashed var(--line);
+      font-weight: 800;
+    }
+
+    @media (max-width: 860px) {
+      .hero {
+        grid-template-columns: 1fr;
+      }
+
+      .action-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .choice-grid,
+      .mode-grid,
+      .stats-grid,
+      .skin-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .topbar {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .player-switch {
+        width: 100%;
+      }
+
+      .player-switch button {
+        flex: 1;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app" id="app"></div>
+
+  <script>
+    const STORAGE_KEY = "little-word-garden-v1";
+    const PLAYERS = ["Yara", "Andy"];
+    const SESSION_SIZE = 10;
+    const CORRECTS_PER_STAR = 5;
+    const DAILY_GOAL_WORDS = 8;
+    const DAILY_GOAL_CORRECT = 3;
+    const STREAK_DAYS_PER_STAR = 3;
+    const CORRECT_FEEDBACK = ["You are great!", "Great job!", "Well done!", "Nice work!"];
+    const WRONG_FEEDBACK = ["Try again!", "Good try!", "Listen one more time.", "Almost!"];
+
+    const SKINS = [
+      { id: "sunny", name: "Sunny Meadow", icon: "🌼", cost: 0 },
+      { id: "princess", name: "Princess Garden", icon: "👑", cost: 8 },
+      { id: "space", name: "Space Explorer", icon: "🚀", cost: 12 },
+      { id: "ocean", name: "Ocean Mermaid", icon: "🐚", cost: 16 },
+      { id: "magiccat", name: "Magic Cat", icon: "🐱", cost: 20 },
+      { id: "dino", name: "Dinosaur Park", icon: "🦕", cost: 24 }
+    ];
+
+    const SCENES = [
+      "All",
+      "At Home",
+      "At the Zoo",
+      "Breakfast Time",
+      "My Body",
+      "My Bag",
+      "Color Hunt"
+    ];
+
+    const WORDS = [
+      { id: "cat", word: "cat", pronunciation: "/kæt/", emoji: "🐱", image: "assets/words/cat.png", category: "Animals", scene: "At the Zoo" },
+      { id: "dog", word: "dog", pronunciation: "/dɔːg/", emoji: "🐶", image: "assets/words/dog.png", category: "Animals", scene: "At the Zoo" },
+      { id: "bird", word: "bird", pronunciation: "/bɝːd/", emoji: "🐦", image: "assets/words/bird.png", category: "Animals", scene: "At the Zoo" },
+      { id: "fish", word: "fish", pronunciation: "/fɪʃ/", emoji: "🐟", image: "assets/words/fish.png", category: "Animals", scene: "At the Zoo" },
+      { id: "rabbit", word: "rabbit", pronunciation: "/ˈræbɪt/", emoji: "🐰", image: "assets/words/rabbit.png", category: "Animals", scene: "At the Zoo" },
+      { id: "apple", word: "apple", pronunciation: "/ˈæpəl/", emoji: "🍎", image: "assets/words/apple.png", category: "Food", scene: "Breakfast Time" },
+      { id: "banana", word: "banana", pronunciation: "/bəˈnænə/", emoji: "🍌", image: "assets/words/banana.png", category: "Food", scene: "Breakfast Time" },
+      { id: "milk", word: "milk", pronunciation: "/mɪlk/", emoji: "🥛", image: "assets/words/milk.png", category: "Food", scene: "Breakfast Time" },
+      { id: "egg", word: "egg", pronunciation: "/eg/", emoji: "🥚", image: "assets/words/egg.png", category: "Food", scene: "Breakfast Time" },
+      { id: "cake", word: "cake", pronunciation: "/keɪk/", emoji: "🍰", image: "assets/words/cake.png", category: "Food", scene: "Breakfast Time" },
+      { id: "red", word: "red", pronunciation: "/red/", emoji: "🔴", image: "assets/words/red.png", category: "Colors", scene: "Color Hunt" },
+      { id: "blue", word: "blue", pronunciation: "/bluː/", emoji: "🔵", image: "assets/words/blue.png", category: "Colors", scene: "Color Hunt" },
+      { id: "yellow", word: "yellow", pronunciation: "/ˈjeloʊ/", emoji: "🟡", image: "assets/words/yellow.png", category: "Colors", scene: "Color Hunt" },
+      { id: "green", word: "green", pronunciation: "/griːn/", emoji: "🟢", image: "assets/words/green.png", category: "Colors", scene: "Color Hunt" },
+      { id: "pink", word: "pink", pronunciation: "/pɪŋk/", emoji: "🌸", image: "assets/words/pink.png", category: "Colors", scene: "Color Hunt" },
+      { id: "eye", word: "eye", pronunciation: "/aɪ/", emoji: "👁️", image: "assets/words/eye.png", category: "Body", scene: "My Body" },
+      { id: "nose", word: "nose", pronunciation: "/noʊz/", emoji: "👃", image: "assets/words/nose.png", category: "Body", scene: "My Body" },
+      { id: "mouth", word: "mouth", pronunciation: "/maʊθ/", emoji: "👄", image: "assets/words/mouth.png", category: "Body", scene: "My Body" },
+      { id: "hand", word: "hand", pronunciation: "/hænd/", emoji: "✋", image: "assets/words/hand.png", category: "Body", scene: "My Body" },
+      { id: "ear", word: "ear", pronunciation: "/ɪr/", emoji: "👂", image: "assets/words/ear.png", category: "Body", scene: "My Body" },
+      { id: "mom", word: "mom", pronunciation: "/mɑːm/", emoji: "👩", image: "assets/words/mom.png", category: "Family", scene: "At Home" },
+      { id: "dad", word: "dad", pronunciation: "/dæd/", emoji: "👨", image: "assets/words/dad.png", category: "Family", scene: "At Home" },
+      { id: "sister", word: "sister", pronunciation: "/ˈsɪstər/", emoji: "👧", image: "assets/words/sister.png", category: "Family", scene: "At Home" },
+      { id: "baby", word: "baby", pronunciation: "/ˈbeɪbi/", emoji: "👶", image: "assets/words/baby.png", category: "Family", scene: "At Home" },
+      { id: "book", word: "book", pronunciation: "/bʊk/", emoji: "📘", image: "assets/words/book.png", category: "Objects", scene: "My Bag" },
+      { id: "bag", word: "bag", pronunciation: "/bæg/", emoji: "🎒", image: "assets/words/bag.png", category: "Objects", scene: "My Bag" },
+      { id: "cup", word: "cup", pronunciation: "/kʌp/", emoji: "🥤", image: "assets/words/cup.png", category: "Objects", scene: "At Home" },
+      { id: "chair", word: "chair", pronunciation: "/tʃer/", emoji: "🪑", image: "assets/words/chair.png", category: "Objects", scene: "At Home" },
+      { id: "ball", word: "ball", pronunciation: "/bɔːl/", emoji: "⚽", image: "assets/words/ball.png", category: "Objects", scene: "My Bag" }
+    ];
+
+    const app = document.getElementById("app");
+
+    let store = loadStore();
+    let state = {
+      player: store.currentPlayer || "Yara",
+      view: "home",
+      scene: "All",
+      mode: null,
+      queue: [],
+      index: 0,
+      selectedChoice: null,
+      choiceFor: null,
+      feedback: "",
+      session: emptySession()
+    };
+
+    function todayKey() {
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = String(now.getMonth() + 1).padStart(2, "0");
+      const d = String(now.getDate()).padStart(2, "0");
+      return `${y}-${m}-${d}`;
+    }
+
+    function emptySession() {
+      return {
+        practiced: 0,
+        correct: 0,
+        attempts: 0,
+        stars: 0,
+        rewardMessages: [],
+        reviewTouched: new Set()
+      };
+    }
+
+    function defaultRewards() {
+      return {
+        correctBank: 0,
+        dailyBonusDate: "",
+        streakCount: 0,
+        streakLastDate: "",
+        streakBonusCount: 0
+      };
+    }
+
+    function defaultProfile(name) {
+      return {
+        name,
+        stars: 0,
+        totalStars: 0,
+        unlockedSkins: ["sunny"],
+        currentSkin: "sunny",
+        daily: {
+          date: todayKey(),
+          practiced: 0,
+          correct: 0,
+          attempts: 0,
+          rewardWords: 0
+        },
+        rewards: defaultRewards(),
+        words: {}
+      };
+    }
+
+    function loadStore() {
+      let parsed = null;
+      try {
+        parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+      } catch (error) {
+        parsed = null;
+      }
+
+      const next = parsed && parsed.players ? parsed : { currentPlayer: "Yara", players: {} };
+      PLAYERS.forEach((name) => {
+        next.players[name] = normalizeProfile(next.players[name], name);
+      });
+      if (!PLAYERS.includes(next.currentPlayer)) next.currentPlayer = "Yara";
+      return next;
+    }
+
+    function normalizeProfile(profile, name) {
+      const base = defaultProfile(name);
+      const merged = { ...base, ...(profile || {}) };
+      merged.daily = { ...base.daily, ...(profile && profile.daily ? profile.daily : {}) };
+      if (merged.daily.date !== todayKey()) {
+        merged.daily = { date: todayKey(), practiced: 0, correct: 0, attempts: 0, rewardWords: 0 };
+      }
+      if (typeof merged.daily.rewardWords !== "number") {
+        merged.daily.rewardWords = merged.daily.practiced || 0;
+      }
+      merged.rewards = { ...defaultRewards(), ...(profile && profile.rewards ? profile.rewards : {}) };
+      merged.rewards.correctBank = Math.max(0, Number(merged.rewards.correctBank) || 0);
+      merged.rewards.streakCount = Math.max(0, Number(merged.rewards.streakCount) || 0);
+      merged.rewards.streakBonusCount = Math.max(0, Number(merged.rewards.streakBonusCount) || 0);
+      merged.words = { ...(profile && profile.words ? profile.words : {}) };
+      merged.unlockedSkins = Array.isArray(merged.unlockedSkins) ? merged.unlockedSkins : ["sunny"];
+      if (!merged.unlockedSkins.includes("sunny")) merged.unlockedSkins.push("sunny");
+      if (!SKINS.some((skin) => skin.id === merged.currentSkin)) merged.currentSkin = "sunny";
+      if (!merged.unlockedSkins.includes(merged.currentSkin)) merged.currentSkin = "sunny";
+      return merged;
+    }
+
+    function saveStore() {
+      store.currentPlayer = state.player;
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+      } catch (error) {
+        state.feedback = "Progress could not be saved in this browser.";
+      }
+    }
+
+    function profile() {
+      const current = store.players[state.player];
+      if (current.daily.date !== todayKey()) {
+        current.daily = { date: todayKey(), practiced: 0, correct: 0, attempts: 0, rewardWords: 0 };
+        saveStore();
+      }
+      return current;
+    }
+
+    function statsFor(wordId) {
+      const current = profile();
+      if (!current.words[wordId]) {
+        current.words[wordId] = {
+          correct: 0,
+          wrong: 0,
+          skip: 0,
+          notMood: 0,
+          last: "new",
+          updatedAt: 0
+        };
+      }
+      return current.words[wordId];
+    }
+
+    function masteredWords(current = profile()) {
+      return WORDS.filter((item) => {
+        const stats = current.words[item.id];
+        return stats && stats.correct >= 3 && stats.wrong <= 1;
+      });
+    }
+
+    function reviewWords(current = profile()) {
+      return WORDS.filter((item) => {
+        const stats = current.words[item.id];
+        if (!stats) return false;
+        return stats.wrong + stats.skip >= 2 || stats.last === "wrong" || stats.last === "skip" || stats.last === "try";
+      }).filter((item) => !masteredWords(current).some((done) => done.id === item.id));
+    }
+
+    function rateText(current = profile()) {
+      if (!current.daily.attempts) return "0%";
+      return `${Math.round((current.daily.correct / current.daily.attempts) * 100)}%`;
+    }
+
+    function dateDaysApart(previous, next) {
+      if (!previous || !next) return null;
+      const start = new Date(`${previous}T00:00:00`);
+      const end = new Date(`${next}T00:00:00`);
+      if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return null;
+      return Math.round((end - start) / 86400000);
+    }
+
+    function dailyGoalMet(current = profile()) {
+      return current.daily.rewardWords >= DAILY_GOAL_WORDS && current.daily.correct >= DAILY_GOAL_CORRECT;
+    }
+
+    function dailyGoalText(current = profile()) {
+      return `${Math.min(current.daily.rewardWords, DAILY_GOAL_WORDS)} / ${DAILY_GOAL_WORDS}`;
+    }
+
+    function rewardProgress(current = profile()) {
+      return {
+        correctStar: `${current.rewards.correctBank} / ${CORRECTS_PER_STAR}`,
+        dailyGoal: dailyGoalText(current),
+        streak: `${current.rewards.streakCount} ${current.rewards.streakCount === 1 ? "day" : "days"}`
+      };
+    }
+
+    function awardStars(current, count, message) {
+      current.stars += count;
+      current.totalStars += count;
+      state.session.stars += count;
+      state.session.rewardMessages.push(message);
+    }
+
+    function updateStreakForToday(current) {
+      const today = todayKey();
+      if (current.rewards.streakLastDate === today) return;
+      const gap = dateDaysApart(current.rewards.streakLastDate, today);
+      current.rewards.streakCount = gap === 1 ? current.rewards.streakCount + 1 : 1;
+      current.rewards.streakLastDate = today;
+    }
+
+    function checkRewardMilestones(current) {
+      while (current.rewards.correctBank >= CORRECTS_PER_STAR) {
+        current.rewards.correctBank -= CORRECTS_PER_STAR;
+        awardStars(current, 1, "Correct star earned!");
+      }
+
+      const today = todayKey();
+      if (dailyGoalMet(current) && current.rewards.dailyBonusDate !== today) {
+        current.rewards.dailyBonusDate = today;
+        updateStreakForToday(current);
+        awardStars(current, 1, "Daily star earned!");
+
+        const streakBonusTarget = Math.floor(current.rewards.streakCount / STREAK_DAYS_PER_STAR);
+        if (streakBonusTarget > current.rewards.streakBonusCount) {
+          current.rewards.streakBonusCount = streakBonusTarget;
+          awardStars(current, 1, "3-day streak star!");
+        }
+      }
+    }
+
+    function shuffle(items) {
+      const copy = [...items];
+      for (let i = copy.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
+    function sessionWords() {
+      const pool = state.scene === "All" ? WORDS : WORDS.filter((item) => item.scene === state.scene);
+      const review = reviewWords().filter((item) => pool.some((candidate) => candidate.id === item.id));
+      const mastered = masteredWords();
+      const weighted = [
+        ...review,
+        ...review,
+        ...pool.filter((item) => !mastered.some((done) => done.id === item.id)),
+        ...pool
+      ];
+      const picked = [];
+      shuffle(weighted).forEach((item) => {
+        if (picked.length < SESSION_SIZE && !picked.some((seen) => seen.id === item.id)) {
+          picked.push(item);
+        }
+      });
+      return picked.length ? picked : shuffle(WORDS).slice(0, SESSION_SIZE);
+    }
+
+    function startMode(mode) {
+      state.mode = mode;
+      state.view = mode;
+      state.queue = sessionWords();
+      state.index = 0;
+      state.selectedChoice = null;
+      state.choiceFor = null;
+      state.feedback = mode === "look" ? "Look, say, then choose." : "Listen and choose.";
+      state.session = emptySession();
+      render();
+      if (mode === "listen") {
+        setTimeout(playCurrentSound, 240);
+      }
+    }
+
+    function currentWord() {
+      return state.queue[state.index] || null;
+    }
+
+    function markWord(outcome) {
+      const item = currentWord();
+      if (!item) return;
+      const current = profile();
+      const stats = statsFor(item.id);
+      const now = Date.now();
+      stats.updatedAt = now;
+      stats.last = outcome;
+
+      current.daily.practiced += 1;
+      state.session.practiced += 1;
+
+      if (outcome === "correct") {
+        stats.correct += 1;
+        current.daily.correct += 1;
+        current.daily.attempts += 1;
+        current.daily.rewardWords += 1;
+        state.session.correct += 1;
+        state.session.attempts += 1;
+        current.rewards.correctBank += 1;
+        const rewardCount = state.session.rewardMessages.length;
+        checkRewardMilestones(current);
+        state.feedback = ["Correct!", ...state.session.rewardMessages.slice(rewardCount)].join(" ");
+        speakFeedback("correct");
+      }
+
+      if (outcome === "wrong" || outcome === "try") {
+        stats.wrong += 1;
+        current.daily.attempts += 1;
+        current.daily.rewardWords += 1;
+        state.session.attempts += 1;
+        const rewardCount = state.session.rewardMessages.length;
+        checkRewardMilestones(current);
+        state.feedback = [
+          outcome === "try" ? "Good try. Try again!" : "Good try! Let's listen one more time.",
+          ...state.session.rewardMessages.slice(rewardCount)
+        ].join(" ");
+        state.session.reviewTouched.add(item.word);
+        speakFeedback("wrong");
+      }
+
+      if (outcome === "skip") {
+        stats.skip += 1;
+        current.daily.rewardWords += 1;
+        const rewardCount = state.session.rewardMessages.length;
+        checkRewardMilestones(current);
+        state.feedback = ["Let's do another one.", ...state.session.rewardMessages.slice(rewardCount)].join(" ");
+        state.session.reviewTouched.add(item.word);
+      }
+
+      if (outcome === "notMood") {
+        stats.notMood += 1;
+        stats.last = "notMood";
+        state.feedback = "No problem. Next one.";
+      }
+
+      saveStore();
+    }
+
+    function nextWord() {
+      if (state.index >= state.queue.length - 1) {
+        state.view = "summary";
+        state.feedback = "";
+        render();
+        return;
+      }
+      state.index += 1;
+      state.selectedChoice = null;
+      state.choiceFor = null;
+      state.feedback = state.mode === "look" ? "Your turn." : "Listen and choose.";
+      render();
+      if (state.mode === "listen") {
+        setTimeout(playCurrentSound, 240);
+      }
+    }
+
+    function chooseAnswer(wordId) {
+      const item = currentWord();
+      if (!item || state.selectedChoice === item.id) return;
+      state.selectedChoice = wordId;
+      if (wordId === item.id) {
+        markWord("correct");
+        render();
+        setTimeout(nextWord, 700);
+      } else {
+        markWord("wrong");
+        render();
+        setTimeout(playCurrentSound, 520);
+      }
+    }
+
+    function listenChoices() {
+      const item = currentWord();
+      if (!item) return [];
+      const others = shuffle(WORDS.filter((word) => word.id !== item.id)).slice(0, 2);
+      return shuffle([item, ...others]);
+    }
+
+    let cachedChoices = [];
+
+    function refreshChoices() {
+      cachedChoices = listenChoices();
+      state.choiceFor = currentWord() ? currentWord().id : null;
+    }
+
+    function endSession() {
+      state.view = "summary";
+      state.feedback = "";
+      render();
+    }
+
+    function getEnglishVoice() {
+      if (!("speechSynthesis" in window)) return null;
+      const voices = window.speechSynthesis.getVoices();
+      const englishVoices = voices.filter((voice) => voice.lang && voice.lang.toLowerCase().startsWith("en"));
+      const preferredNames = ["samantha", "victoria", "karen", "moira", "tessa", "serena", "google us english female", "female"];
+      return englishVoices.find((voice) => preferredNames.some((name) => voice.name.toLowerCase().includes(name))) || englishVoices[0] || null;
+    }
+
+    function speakText(text, options = {}) {
+      if (!text || !("speechSynthesis" in window)) return false;
+      window.speechSynthesis.cancel();
+      const voice = getEnglishVoice();
+      const repeat = options.repeat || 1;
+      for (let i = 0; i < repeat; i += 1) {
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = "en-US";
+        utterance.rate = options.rate || 0.82;
+        utterance.pitch = options.pitch || 1.08;
+        if (voice) utterance.voice = voice;
+        window.speechSynthesis.speak(utterance);
+      }
+      return true;
+    }
+
+    function randomFrom(items) {
+      return items[Math.floor(Math.random() * items.length)];
+    }
+
+    function speakFeedback(type) {
+      const phrases = type === "correct" ? CORRECT_FEEDBACK : WRONG_FEEDBACK;
+      speakText(randomFrom(phrases), { rate: 0.78, pitch: 1.16 });
+    }
+
+    function playCurrentSound(options = {}) {
+      const item = currentWord();
+      if (!item) {
+        state.feedback = "Sound is not available in this browser.";
+        render();
+        return;
+      }
+      if (!speakText(item.word, {
+        rate: options.rate || 0.8,
+        pitch: 1.05,
+        repeat: options.repeat || 1
+      })) {
+        state.feedback = "Sound is not available in this browser.";
+        render();
+      }
+    }
+
+    function unlockOrUseSkin(skinId) {
+      const current = profile();
+      const skin = SKINS.find((item) => item.id === skinId);
+      if (!skin) return;
+      if (current.unlockedSkins.includes(skinId)) {
+        current.currentSkin = skinId;
+        state.feedback = `${skin.name} is on.`;
+      } else if (current.stars >= skin.cost) {
+        current.stars -= skin.cost;
+        current.unlockedSkins.push(skinId);
+        current.currentSkin = skinId;
+        state.feedback = `${skin.name} unlocked!`;
+      } else {
+        state.feedback = `${skin.cost - current.stars} more stars to unlock.`;
+      }
+      saveStore();
+      render();
+    }
+
+    function resetCurrentPlayer() {
+      const ok = window.confirm(`Reset progress for ${state.player}? This cannot be undone.`);
+      if (!ok) return;
+      store.players[state.player] = defaultProfile(state.player);
+      state.view = "home";
+      state.feedback = "Progress reset.";
+      saveStore();
+      render();
+    }
+
+    function setPlayer(name) {
+      if (!PLAYERS.includes(name)) return;
+      state.player = name;
+      store.currentPlayer = name;
+      state.view = "home";
+      state.feedback = "";
+      saveStore();
+      render();
+    }
+
+    function setScene(scene) {
+      state.scene = scene;
+      render();
+    }
+
+    function shell(content, side = renderSidePanel()) {
+      const current = profile();
+      document.body.dataset.skin = current.currentSkin || "sunny";
+      return `
+        <header class="topbar">
+          <div class="brand">
+            <div class="brand-mark" aria-hidden="true">${skinById(current.currentSkin).icon}</div>
+            <div>
+              <h1>Little Word Garden</h1>
+              <p class="muted">Choose, listen, say, and shine.</p>
+            </div>
+          </div>
+          <nav class="player-switch" aria-label="Choose Player">
+            ${PLAYERS.map((name) => `
+              <button type="button" class="${name === state.player ? "active" : ""}" data-action="player" data-player="${name}">${name}</button>
+            `).join("")}
+          </nav>
+        </header>
+        <main class="hero">
+          <section class="panel main-panel">${content}</section>
+          <aside class="panel side-panel">${side}</aside>
+        </main>
+      `;
+    }
+
+    function skinById(id) {
+      return SKINS.find((skin) => skin.id === id) || SKINS[0];
+    }
+
+    function wordVisual(item) {
+      return `
+        <div class="visual" aria-hidden="true">
+          <img class="word-image" src="${item.image}" alt="" onerror="this.classList.add('is-hidden'); this.nextElementSibling.classList.remove('is-hidden');">
+          <span class="emoji is-hidden">${item.emoji}</span>
+        </div>
+      `;
+    }
+
+    function wordLabel(item) {
+      return `
+        <div class="word">${item.word}</div>
+        <div class="pronunciation">${item.pronunciation}</div>
+      `;
+    }
+
+    function choiceLabel(item) {
+      return `
+        <div class="choice-word">
+          <strong>${item.word}</strong>
+          <span>${item.pronunciation}</span>
+        </div>
+      `;
+    }
+
+    function renderRewardProgress(current = profile()) {
+      const progress = rewardProgress(current);
+      return `
+        <div class="mini-list">
+          <div class="mini-row"><span>Correct Star</span><span>${progress.correctStar}</span></div>
+          <div class="mini-row"><span>Daily Goal</span><span>${progress.dailyGoal}</span></div>
+          <div class="mini-row"><span>Streak</span><span>${progress.streak}</span></div>
+        </div>
+      `;
+    }
+
+    function renderHome() {
+      const current = profile();
+      const review = reviewWords(current);
+      return shell(`
+        <h2>Choose Player</h2>
+        <div class="stats-grid">
+          <div class="stat"><strong>${current.stars}</strong><span>Stars</span></div>
+          <div class="stat"><strong>${current.daily.practiced}</strong><span>Words Today</span></div>
+          <div class="stat"><strong>${rateText(current)}</strong><span>Correct Rate</span></div>
+        </div>
+
+        <section class="small-section">
+          <h3>Reward Progress</h3>
+          ${renderRewardProgress(current)}
+        </section>
+
+        <div class="small-section">
+          <h3>Scene</h3>
+          <div class="scene-row">
+            ${SCENES.map((scene) => `
+              <button type="button" class="chip ${state.scene === scene ? "active" : ""}" data-action="scene" data-scene="${scene}">${scene}</button>
+            `).join("")}
+          </div>
+        </div>
+
+        <div class="mode-grid">
+          <button type="button" class="mode-button" data-action="start-look">
+            <span class="big-icon" aria-hidden="true">🖼️</span>
+            <strong>Look & Say</strong>
+            <span class="muted">See the picture. Say the word.</span>
+          </button>
+          <button type="button" class="mode-button" data-action="start-listen">
+            <span class="big-icon" aria-hidden="true">🔊</span>
+            <strong>Listen & Choose</strong>
+            <span class="muted">Hear the word. Pick the picture.</span>
+          </button>
+        </div>
+
+        <div class="toolbar small-section">
+          <button type="button" class="soft" data-action="progress">Progress</button>
+          <button type="button" class="soft" data-action="skins">Choose Skin</button>
+          <button type="button" class="danger" data-action="reset">Reset Progress</button>
+        </div>
+
+        ${state.feedback ? `<p class="result">${state.feedback}</p>` : ""}
+      `, renderSidePanel(review));
+    }
+
+    function renderLook() {
+      const item = currentWord();
+      if (!item) return renderHome();
+      const progress = Math.round(((state.index + 1) / state.queue.length) * 100);
+      return shell(`
+        <div class="progress-line">
+          <span>Look & Say</span>
+          <span>${state.index + 1} / ${state.queue.length}</span>
+        </div>
+        <div class="meter" aria-label="Progress"><div class="meter-fill" style="width:${progress}%"></div></div>
+        <div class="toolbar small-section">
+          <button type="button" class="primary" data-action="play-sound">Play Sound</button>
+          <button type="button" class="soft" data-action="end-session">End Session</button>
+        </div>
+        <div class="word-card">
+          <div>
+            ${wordVisual(item)}
+            ${wordLabel(item)}
+            <div class="category-line">${item.scene} · ${item.category}</div>
+          </div>
+        </div>
+        <div class="action-grid">
+          <button type="button" class="primary" data-action="look-correct">Correct</button>
+          <button type="button" class="accent" data-action="look-try">Try Again</button>
+          <button type="button" class="soft" data-action="look-skip">Skip</button>
+          <button type="button" class="soft" data-action="look-notmood">Not in mood</button>
+          <button type="button" class="soft" data-action="next">Next</button>
+        </div>
+        <p class="result">${state.feedback}</p>
+      `);
+    }
+
+    function renderListen() {
+      const item = currentWord();
+      if (!item) return renderHome();
+      if (!cachedChoices.length || state.choiceFor !== item.id) {
+        refreshChoices();
+      }
+      const progress = Math.round(((state.index + 1) / state.queue.length) * 100);
+      return shell(`
+        <div class="progress-line">
+          <span>Listen & Choose</span>
+          <span>${state.index + 1} / ${state.queue.length}</span>
+        </div>
+        <div class="meter" aria-label="Progress"><div class="meter-fill" style="width:${progress}%"></div></div>
+        <div class="toolbar small-section">
+          <button type="button" class="primary" data-action="play-sound">Play Sound</button>
+          <button type="button" class="soft" data-action="listen-skip">Skip</button>
+          <button type="button" class="soft" data-action="end-session">End Session</button>
+        </div>
+        <div class="choice-grid">
+          ${cachedChoices.map((choice) => {
+            let status = "";
+            if (state.selectedChoice === choice.id && choice.id === item.id) status = "correct";
+            if (state.selectedChoice === choice.id && choice.id !== item.id) status = "needs-try";
+            return `
+              <button type="button" class="choice ${status}" data-action="choose" data-word="${choice.id}" aria-label="${choice.word}">
+                ${wordVisual(choice)}
+                ${choiceLabel(choice)}
+              </button>
+            `;
+          }).join("")}
+        </div>
+        <p class="result">${state.feedback}</p>
+      `);
+    }
+
+    function renderSummary() {
+      const review = [...state.session.reviewTouched].slice(0, 6);
+      return shell(`
+        <div class="summary">
+          <div class="summary-icon" aria-hidden="true">⭐</div>
+          <h2>Great job!</h2>
+          <div class="stats-grid">
+            <div class="stat"><strong>${state.session.stars}</strong><span>Stars Earned</span></div>
+            <div class="stat"><strong>${state.session.practiced}</strong><span>Words Practiced</span></div>
+            <div class="stat"><strong>${state.session.attempts ? Math.round((state.session.correct / state.session.attempts) * 100) : 0}%</strong><span>Correct Rate</span></div>
+          </div>
+          <div>
+            <h3>Review Words</h3>
+            <div class="word-list" style="justify-content:center; margin-top:10px;">
+              ${review.length ? review.map((word) => `<span class="chip">${word}</span>`).join("") : `<span class="chip">Nice work</span>`}
+            </div>
+          </div>
+          <div class="toolbar" style="justify-content:center;">
+            <button type="button" class="primary" data-action="home">Come back next time</button>
+            <button type="button" class="soft" data-action="start-look">Look & Say</button>
+            <button type="button" class="soft" data-action="start-listen">Listen & Choose</button>
+          </div>
+        </div>
+      `);
+    }
+
+    function renderSkins() {
+      const current = profile();
+      return shell(`
+        <h2>Choose Skin</h2>
+        <p class="muted">Stars: ${current.stars}</p>
+        <div class="skin-grid">
+          ${SKINS.map((skin) => {
+            const unlocked = current.unlockedSkins.includes(skin.id);
+            const isCurrent = current.currentSkin === skin.id;
+            const label = unlocked ? (isCurrent ? "Using" : "Use") : `${skin.cost} Stars`;
+            return `
+              <button type="button" class="skin-card ${isCurrent ? "current" : ""} ${unlocked ? "" : "locked"}" data-action="skin" data-skin="${skin.id}">
+                <span class="skin-icon" aria-hidden="true">${skin.icon}</span>
+                <strong>${skin.name}</strong>
+                <span class="muted">${label}</span>
+              </button>
+            `;
+          }).join("")}
+        </div>
+        <div class="toolbar small-section">
+          <button type="button" class="soft" data-action="home">Back</button>
+        </div>
+        ${state.feedback ? `<p class="result">${state.feedback}</p>` : ""}
+      `);
+    }
+
+    function renderProgress() {
+      const current = profile();
+      const mastered = masteredWords(current);
+      const review = reviewWords(current);
+      return shell(`
+        <h2>Progress</h2>
+        <div class="stats-grid">
+          <div class="stat"><strong>${current.totalStars}</strong><span>Total Stars</span></div>
+          <div class="stat"><strong>${mastered.length}</strong><span>Mastered Words</span></div>
+          <div class="stat"><strong>${review.length}</strong><span>Review Words</span></div>
+        </div>
+        <section class="small-section">
+          <h3>Reward Progress</h3>
+          ${renderRewardProgress(current)}
+        </section>
+        <section class="small-section">
+          <h3>Mastered Words</h3>
+          <div class="word-list" style="margin-top:10px;">
+            ${mastered.length ? mastered.map((item) => `<span class="chip">${item.word}</span>`).join("") : `<div class="empty">Keep going.</div>`}
+          </div>
+        </section>
+        <section class="small-section">
+          <h3>Review Words</h3>
+          <div class="mini-list">
+            ${review.length ? review.slice(0, 10).map((item) => {
+              const stats = statsFor(item.id);
+              return `<div class="mini-row"><span>${item.emoji} ${item.word}</span><span>${stats.correct} / ${stats.wrong + stats.skip}</span></div>`;
+            }).join("") : `<div class="empty">No review words yet.</div>`}
+          </div>
+        </section>
+        <div class="toolbar small-section">
+          <button type="button" class="soft" data-action="home">Back</button>
+          <button type="button" class="danger" data-action="reset">Reset Progress</button>
+        </div>
+      `);
+    }
+
+    function renderSidePanel(reviewOverride) {
+      const current = profile();
+      const review = reviewOverride || reviewWords(current);
+      const mastered = masteredWords(current);
+      return `
+        <h2>${state.player}</h2>
+        <div class="stats-grid">
+          <div class="stat"><strong>${current.stars}</strong><span>Stars</span></div>
+          <div class="stat"><strong>${current.daily.practiced}</strong><span>Today</span></div>
+          <div class="stat"><strong>${rateText(current)}</strong><span>Rate</span></div>
+        </div>
+        <section class="small-section">
+          <h3>Reward Progress</h3>
+          ${renderRewardProgress(current)}
+        </section>
+        <section class="small-section">
+          <h3>Review Words</h3>
+          <div class="word-list" style="margin-top:10px;">
+            ${review.length ? review.slice(0, 8).map((item) => `<span class="chip">${item.word}</span>`).join("") : `<span class="chip">Ready</span>`}
+          </div>
+        </section>
+        <section class="small-section">
+          <h3>Mastered Words</h3>
+          <div class="word-list" style="margin-top:10px;">
+            ${mastered.length ? mastered.slice(0, 8).map((item) => `<span class="chip">${item.word}</span>`).join("") : `<span class="chip">Soon</span>`}
+          </div>
+        </section>
+        <section class="small-section">
+          <h3>Current Skin</h3>
+          <div class="mini-row" style="margin-top:10px;">
+            <span>${skinById(current.currentSkin).icon} ${skinById(current.currentSkin).name}</span>
+            <span>${current.unlockedSkins.length} / ${SKINS.length}</span>
+          </div>
+        </section>
+      `;
+    }
+
+    function render() {
+      if (state.view !== "listen") cachedChoices = [];
+      if (state.view === "home") app.innerHTML = renderHome();
+      if (state.view === "look") app.innerHTML = renderLook();
+      if (state.view === "listen") app.innerHTML = renderListen();
+      if (state.view === "summary") app.innerHTML = renderSummary();
+      if (state.view === "skins") app.innerHTML = renderSkins();
+      if (state.view === "progress") app.innerHTML = renderProgress();
+    }
+
+    app.addEventListener("click", (event) => {
+      const button = event.target.closest("button[data-action]");
+      if (!button) return;
+      const action = button.dataset.action;
+
+      if (action === "player") setPlayer(button.dataset.player);
+      if (action === "scene") setScene(button.dataset.scene);
+      if (action === "start-look") startMode("look");
+      if (action === "start-listen") {
+        cachedChoices = [];
+        startMode("listen");
+      }
+      if (action === "home") {
+        state.view = "home";
+        state.feedback = "";
+        render();
+      }
+      if (action === "progress") {
+        state.view = "progress";
+        render();
+      }
+      if (action === "skins") {
+        state.view = "skins";
+        render();
+      }
+      if (action === "skin") unlockOrUseSkin(button.dataset.skin);
+      if (action === "reset") resetCurrentPlayer();
+      if (action === "play-sound") playCurrentSound({ repeat: 3, rate: 0.62 });
+      if (action === "next") nextWord();
+      if (action === "end-session") endSession();
+      if (action === "listen-skip") {
+        markWord("skip");
+        render();
+        setTimeout(nextWord, 520);
+      }
+      if (action === "look-correct") {
+        markWord("correct");
+        render();
+        setTimeout(nextWord, 650);
+      }
+      if (action === "look-try") {
+        markWord("try");
+        render();
+      }
+      if (action === "look-skip") {
+        markWord("skip");
+        render();
+        setTimeout(nextWord, 520);
+      }
+      if (action === "look-notmood") {
+        markWord("notMood");
+        render();
+        setTimeout(nextWord, 520);
+      }
+      if (action === "choose") chooseAnswer(button.dataset.word);
+    });
+
+    window.speechSynthesis && window.speechSynthesis.getVoices();
+    render();
+  </script>
+</body>
+</html>
