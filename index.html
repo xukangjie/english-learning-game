@@ -625,6 +625,7 @@
 
   <script>
     const STORAGE_KEY = "little-word-garden-v1";
+    const ASSET_VERSION = "20260701-optimized";
     const PLAYERS = ["Yara", "Andy"];
     const SESSION_SIZE = 10;
     const CORRECTS_PER_STAR = 5;
@@ -1183,10 +1184,14 @@
     function wordVisual(item) {
       return `
         <div class="visual" aria-hidden="true">
-          <img class="word-image" src="${item.image}" alt="" onerror="this.classList.add('is-hidden'); this.nextElementSibling.classList.remove('is-hidden');">
+          <img class="word-image" src="${imageSrc(item.image)}" alt="" onerror="this.classList.add('is-hidden'); this.nextElementSibling.classList.remove('is-hidden');">
           <span class="emoji is-hidden">${item.emoji}</span>
         </div>
       `;
+    }
+
+    function imageSrc(path) {
+      return `${path}?v=${ASSET_VERSION}`;
     }
 
     function wordLabel(item) {
