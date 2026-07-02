@@ -937,6 +937,7 @@
       state.choiceFor = null;
       state.feedback = mode === "look" ? "Look, say, then choose." : "Listen and choose.";
       state.session = emptySession();
+      preloadUpcomingImages();
       render();
       if (mode === "listen") {
         setTimeout(playCurrentSound, 240);
@@ -1017,6 +1018,7 @@
       state.selectedChoice = null;
       state.choiceFor = null;
       state.feedback = state.mode === "look" ? "Your turn." : "Listen and choose.";
+      preloadUpcomingImages();
       render();
       if (state.mode === "listen") {
         setTimeout(playCurrentSound, 240);
@@ -1050,6 +1052,7 @@
     function refreshChoices() {
       cachedChoices = listenChoices();
       state.choiceFor = currentWord() ? currentWord().id : null;
+      preloadImageItems(cachedChoices);
     }
 
     function endSession() {
@@ -1184,14 +1187,26 @@
     function wordVisual(item) {
       return `
         <div class="visual" aria-hidden="true">
-          <img class="word-image" src="${imageSrc(item.image)}" alt="" onerror="this.classList.add('is-hidden'); this.nextElementSibling.classList.remove('is-hidden');">
+          <img class="word-image" src="${imageSrc(item.image)}" alt="" loading="eager" decoding="async" onerror="this.classList.add('is-hidden'); this.nextElementSibling.classList.remove('is-hidden');">
           <span class="emoji is-hidden">${item.emoji}</span>
         </div>
       `;
     }
 
     function imageSrc(path) {
-      return `${path}?v=${ASSET_VERSION}`;
+      return `${path.replace(/\.(png|jpe?g)$/i, ".webp")}?v=${ASSET_VERSION}`;
+    }
+
+    function preloadImageItems(items) {
+      items.forEach((item) => {
+        if (!item || !item.image) return;
+        const image = new Image();
+        image.src = imageSrc(item.image);
+      });
+    }
+
+    function preloadUpcomingImages() {
+      preloadImageItems(state.queue.slice(state.index, state.index + 4));
     }
 
     function wordLabel(item) {
