@@ -436,16 +436,16 @@
 
     .choice-grid {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 12px;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 10px;
       margin: 18px 0;
     }
 
     .choice {
-      min-height: 210px;
+      min-height: 176px;
       display: grid;
       place-items: center;
-      gap: 10px;
+      gap: 8px;
       background: var(--surface-strong);
       border: 2px solid transparent;
     }
@@ -455,7 +455,7 @@
     }
 
     .choice .visual {
-      width: min(100%, 150px);
+      width: min(100%, 112px);
     }
 
     .choice-word {
@@ -465,7 +465,7 @@
     }
 
     .choice-word strong {
-      font-size: clamp(1.05rem, 2vw, 1.35rem);
+      font-size: clamp(0.92rem, 1.5vw, 1.12rem);
       line-height: 1;
       text-transform: lowercase;
     }
@@ -628,6 +628,8 @@
     const ASSET_VERSION = "20260703-fast-360";
     const PLAYERS = ["Yara", "Andy"];
     const SESSION_SIZE = 10;
+    const LISTEN_CHOICE_COUNT = 5;
+    const LISTEN_WRONG_LIMIT = 2;
     const WORD_SPEECH_RATE = 0.75;
     const CORRECTS_PER_STAR = 5;
     const DAILY_GOAL_WORDS = 8;
@@ -762,6 +764,8 @@
       index: 0,
       selectedChoice: null,
       choiceFor: null,
+      listenWrongCount: 0,
+      countedCurrentWord: false,
       feedback: "",
       session: emptySession()
     };
@@ -999,6 +1003,8 @@
       state.index = 0;
       state.selectedChoice = null;
       state.choiceFor = null;
+      state.listenWrongCount = 0;
+      state.countedCurrentWord = false;
       state.feedback = mode === "look" ? "Look, say, then choose." : "Listen and choose.";
       state.session = emptySession();
       preloadUpcomingImages();
@@ -1012,6 +1018,17 @@
       return state.queue[state.index] || null;
     }
 
+    function countCurrentWordPractice(current, outcome) {
+      if (state.countedCurrentWord) return false;
+      current.daily.practiced += 1;
+      state.session.practiced += 1;
+      state.countedCurrentWord = true;
+      if (outcome !== "notMood") {
+        current.daily.rewardWords += 1;
+      }
+      return true;
+    }
+
     function markWord(outcome, options = {}) {
       const item = currentWord();
       if (!item) return;
@@ -1021,14 +1038,12 @@
       stats.updatedAt = now;
       stats.last = outcome;
 
-      current.daily.practiced += 1;
-      state.session.practiced += 1;
+      countCurrentWordPractice(current, outcome);
 
       if (outcome === "correct") {
         stats.correct += 1;
         current.daily.correct += 1;
         current.daily.attempts += 1;
-        current.daily.rewardWords += 1;
         state.session.correct += 1;
         state.session.attempts += 1;
         current.rewards.correctBank += 1;
@@ -1041,7 +1056,6 @@
       if (outcome === "wrong" || outcome === "try") {
         stats.wrong += 1;
         current.daily.attempts += 1;
-        current.daily.rewardWords += 1;
         state.session.attempts += 1;
         const rewardCount = state.session.rewardMessages.length;
         checkRewardMilestones(current);
@@ -1055,7 +1069,6 @@
 
       if (outcome === "skip") {
         stats.skip += 1;
-        current.daily.rewardWords += 1;
         const rewardCount = state.session.rewardMessages.length;
         checkRewardMilestones(current);
         state.feedback = ["Let's do another one.", ...state.session.rewardMessages.slice(rewardCount)].join(" ");
@@ -1081,6 +1094,8 @@
       state.index += 1;
       state.selectedChoice = null;
       state.choiceFor = null;
+      state.listenWrongCount = 0;
+      state.countedCurrentWord = false;
       state.feedback = state.mode === "look" ? "Your turn." : "Listen and choose.";
       preloadUpcomingImages();
       render();
@@ -1091,7 +1106,7 @@
 
     function chooseAnswer(wordId) {
       const item = currentWord();
-      if (!item || state.selectedChoice === item.id) return;
+      if (!item || state.selectedChoice === item.id || state.listenWrongCount >= LISTEN_WRONG_LIMIT) return;
       state.selectedChoice = wordId;
       if (wordId === item.id) {
         markWord("correct");
@@ -1099,16 +1114,45 @@
         setTimeout(nextWord, 700);
       } else {
         const selected = WORDS.find((word) => word.id === wordId);
-        markWord("wrong", { skipVoice: true });
-        render();
+        recordListenWrongChoice(selected);
         playWordSound(selected);
       }
+    }
+
+    function recordListenWrongChoice(selected) {
+      const item = currentWord();
+      if (!item) return;
+      const current = profile();
+      countCurrentWordPractice(current, "wrong");
+      current.daily.attempts += 1;
+      state.session.attempts += 1;
+      state.listenWrongCount += 1;
+
+      const rewardCount = state.session.rewardMessages.length;
+      checkRewardMilestones(current);
+
+      if (state.listenWrongCount >= LISTEN_WRONG_LIMIT) {
+        const stats = statsFor(item.id);
+        stats.wrong += 1;
+        stats.last = "wrong";
+        stats.updatedAt = Date.now();
+        state.session.reviewTouched.add(item.word);
+        state.feedback = ["Let's practice this one later.", ...state.session.rewardMessages.slice(rewardCount)].join(" ");
+        saveStore();
+        render();
+        setTimeout(nextWord, 850);
+        return;
+      }
+
+      state.feedback = ["Good try!", ...state.session.rewardMessages.slice(rewardCount)].join(" ");
+      saveStore();
+      render();
     }
 
     function listenChoices() {
       const item = currentWord();
       if (!item) return [];
-      const others = shuffle(WORDS.filter((word) => word.id !== item.id)).slice(0, 2);
+      const others = shuffle(WORDS.filter((word) => word.id !== item.id)).slice(0, LISTEN_CHOICE_COUNT - 1);
       return shuffle([item, ...others]);
     }
 
