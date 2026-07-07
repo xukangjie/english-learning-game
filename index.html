@@ -625,9 +625,10 @@
 
   <script>
     const STORAGE_KEY = "little-word-garden-v1";
-    const ASSET_VERSION = "20260701-optimized";
+    const ASSET_VERSION = "20260703-fast-360";
     const PLAYERS = ["Yara", "Andy"];
     const SESSION_SIZE = 10;
+    const WORD_SPEECH_RATE = 0.75;
     const CORRECTS_PER_STAR = 5;
     const DAILY_GOAL_WORDS = 8;
     const DAILY_GOAL_CORRECT = 3;
@@ -1011,7 +1012,7 @@
       return state.queue[state.index] || null;
     }
 
-    function markWord(outcome) {
+    function markWord(outcome, options = {}) {
       const item = currentWord();
       if (!item) return;
       const current = profile();
@@ -1034,7 +1035,7 @@
         const rewardCount = state.session.rewardMessages.length;
         checkRewardMilestones(current);
         state.feedback = ["Correct!", ...state.session.rewardMessages.slice(rewardCount)].join(" ");
-        speakFeedback("correct");
+        if (!options.skipVoice) speakFeedback("correct");
       }
 
       if (outcome === "wrong" || outcome === "try") {
@@ -1049,7 +1050,7 @@
           ...state.session.rewardMessages.slice(rewardCount)
         ].join(" ");
         state.session.reviewTouched.add(item.word);
-        speakFeedback("wrong");
+        if (!options.skipVoice) speakFeedback("wrong");
       }
 
       if (outcome === "skip") {
@@ -1097,9 +1098,10 @@
         render();
         setTimeout(nextWord, 700);
       } else {
-        markWord("wrong");
+        const selected = WORDS.find((word) => word.id === wordId);
+        markWord("wrong", { skipVoice: true });
         render();
-        setTimeout(playCurrentSound, 520);
+        playWordSound(selected);
       }
     }
 
@@ -1111,11 +1113,13 @@
     }
 
     let cachedChoices = [];
+    const preloadedImageSrcs = new Set();
+    let fullLibraryPreloadStarted = false;
 
     function refreshChoices() {
       cachedChoices = listenChoices();
       state.choiceFor = currentWord() ? currentWord().id : null;
-      preloadImageItems(cachedChoices);
+      preloadImageItems(cachedChoices, { priority: "high" });
     }
 
     function endSession() {
@@ -1140,7 +1144,7 @@
       for (let i = 0; i < repeat; i += 1) {
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = "en-US";
-        utterance.rate = options.rate || 0.82;
+        utterance.rate = options.rate || WORD_SPEECH_RATE;
         utterance.pitch = options.pitch || 1.08;
         if (voice) utterance.voice = voice;
         window.speechSynthesis.speak(utterance);
@@ -1154,7 +1158,16 @@
 
     function speakFeedback(type) {
       const phrases = type === "correct" ? CORRECT_FEEDBACK : WRONG_FEEDBACK;
-      speakText(randomFrom(phrases), { rate: 0.78, pitch: 1.16 });
+      speakText(randomFrom(phrases), { rate: WORD_SPEECH_RATE, pitch: 1.16 });
+    }
+
+    function playWordSound(wordOrItem, options = {}) {
+      const text = typeof wordOrItem === "string" ? wordOrItem : wordOrItem && wordOrItem.word;
+      return speakText(text, {
+        rate: options.rate || WORD_SPEECH_RATE,
+        pitch: options.pitch || 1.05,
+        repeat: options.repeat || 1
+      });
     }
 
     function playCurrentSound(options = {}) {
@@ -1164,11 +1177,7 @@
         render();
         return;
       }
-      if (!speakText(item.word, {
-        rate: options.rate || 0.8,
-        pitch: 1.05,
-        repeat: options.repeat || 1
-      })) {
+      if (!playWordSound(item, options)) {
         state.feedback = "Sound is not available in this browser.";
         render();
       }
@@ -1250,7 +1259,7 @@
     function wordVisual(item) {
       return `
         <div class="visual" aria-hidden="true">
-          <img class="word-image" src="${imageSrc(item.image)}" alt="" loading="eager" decoding="async" onerror="this.classList.add('is-hidden'); this.nextElementSibling.classList.remove('is-hidden');">
+          <img class="word-image" src="${imageSrc(item.image)}" alt="" loading="eager" decoding="async" fetchpriority="high" onerror="this.classList.add('is-hidden'); this.nextElementSibling.classList.remove('is-hidden');">
           <span class="emoji is-hidden">${item.emoji}</span>
         </div>
       `;
@@ -1260,16 +1269,44 @@
       return `${path.replace(/\.(png|jpe?g)$/i, ".webp")}?v=${ASSET_VERSION}`;
     }
 
-    function preloadImageItems(items) {
+    function preloadImageItems(items, options = {}) {
       items.forEach((item) => {
         if (!item || !item.image) return;
+        const src = imageSrc(item.image);
+        if (preloadedImageSrcs.has(src)) return;
+        preloadedImageSrcs.add(src);
         const image = new Image();
-        image.src = imageSrc(item.image);
+        image.decoding = "async";
+        image.fetchPriority = options.priority || "low";
+        image.src = src;
       });
     }
 
     function preloadUpcomingImages() {
-      preloadImageItems(state.queue.slice(state.index, state.index + 4));
+      preloadImageItems(state.queue.slice(state.index), { priority: "high" });
+    }
+
+    function scheduleFullLibraryPreload() {
+      if (fullLibraryPreloadStarted) return;
+      fullLibraryPreloadStarted = true;
+      const remaining = [...WORDS];
+      const preloadBatch = (deadline) => {
+        let count = 0;
+        while (remaining.length && count < 4 && (!deadline || deadline.timeRemaining() > 4)) {
+          preloadImageItems([remaining.shift()]);
+          count += 1;
+        }
+        if (remaining.length) schedulePreload(preloadBatch);
+      };
+      schedulePreload(preloadBatch);
+    }
+
+    function schedulePreload(callback) {
+      if ("requestIdleCallback" in window) {
+        window.requestIdleCallback(callback, { timeout: 1200 });
+      } else {
+        window.setTimeout(() => callback(), 120);
+      }
     }
 
     function wordLabel(item) {
@@ -1577,7 +1614,7 @@
       }
       if (action === "skin") unlockOrUseSkin(button.dataset.skin);
       if (action === "reset") resetCurrentPlayer();
-      if (action === "play-sound") playCurrentSound({ repeat: 3, rate: 0.62 });
+      if (action === "play-sound") playCurrentSound({ repeat: 3 });
       if (action === "next") nextWord();
       if (action === "end-session") endSession();
       if (action === "listen-skip") {
@@ -1609,6 +1646,7 @@
 
     window.speechSynthesis && window.speechSynthesis.getVoices();
     render();
+    scheduleFullLibraryPreload();
   </script>
 </body>
 </html>
