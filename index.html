@@ -267,7 +267,7 @@
 
     .mode-grid {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 12px;
       margin-top: 20px;
     }
@@ -430,7 +430,7 @@
 
     .action-grid {
       display: grid;
-      grid-template-columns: repeat(5, minmax(0, 1fr));
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 10px;
     }
 
@@ -439,6 +439,13 @@
       grid-template-columns: repeat(5, minmax(0, 1fr));
       gap: 10px;
       margin: 18px 0;
+    }
+
+    .choice-grid.three-choice {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      max-width: 760px;
+      margin-left: auto;
+      margin-right: auto;
     }
 
     .choice {
@@ -629,8 +636,12 @@
     const PLAYERS = ["Yara", "Andy"];
     const SESSION_SIZE = 10;
     const LISTEN_CHOICE_COUNT = 5;
+    const REPEAT_CHOICE_COUNT = 3;
     const LISTEN_WRONG_LIMIT = 2;
-    const WORD_SPEECH_RATE = 0.75;
+    const WORD_SLOW_RATE = 0.6;
+    const WORD_NORMAL_RATE = 1;
+    const FEEDBACK_RATE = 0.75;
+    const WORD_SPEECH_SEQUENCE = [WORD_SLOW_RATE, WORD_SLOW_RATE, WORD_NORMAL_RATE];
     const CORRECTS_PER_STAR = 5;
     const DAILY_GOAL_WORDS = 8;
     const DAILY_GOAL_CORRECT = 3;
@@ -766,6 +777,7 @@
       choiceFor: null,
       listenWrongCount: 0,
       countedCurrentWord: false,
+      repeatStep: "listen",
       feedback: "",
       session: emptySession()
     };
@@ -882,10 +894,12 @@
           wrong: 0,
           skip: 0,
           notMood: 0,
+          helped: 0,
           last: "new",
           updatedAt: 0
         };
       }
+      if (typeof current.words[wordId].helped !== "number") current.words[wordId].helped = 0;
       return current.words[wordId];
     }
 
@@ -900,7 +914,7 @@
       return WORDS.filter((item) => {
         const stats = current.words[item.id];
         if (!stats) return false;
-        return stats.wrong + stats.skip >= 2 || stats.last === "wrong" || stats.last === "skip" || stats.last === "try";
+        return stats.wrong + stats.skip >= 2 || stats.helped > 0 || stats.last === "wrong" || stats.last === "skip" || stats.last === "try" || stats.last === "helped";
       }).filter((item) => !masteredWords(current).some((done) => done.id === item.id));
     }
 
@@ -996,6 +1010,12 @@
       return picked.length ? picked : shuffle(WORDS).slice(0, SESSION_SIZE);
     }
 
+    function feedbackForMode(mode) {
+      if (mode === "look") return "Look, say, then choose.";
+      if (mode === "repeat") return "Listen. Say it. Then find it.";
+      return "Listen and choose.";
+    }
+
     function startMode(mode) {
       state.mode = mode;
       state.view = mode;
@@ -1005,11 +1025,13 @@
       state.choiceFor = null;
       state.listenWrongCount = 0;
       state.countedCurrentWord = false;
-      state.feedback = mode === "look" ? "Look, say, then choose." : "Listen and choose.";
+      state.repeatStep = "listen";
+      state.feedback = feedbackForMode(mode);
       state.session = emptySession();
+      cachedChoices = [];
       preloadUpcomingImages();
       render();
-      if (mode === "listen") {
+      if (mode === "listen" || mode === "repeat") {
         setTimeout(playCurrentSound, 240);
       }
     }
@@ -1023,7 +1045,7 @@
       current.daily.practiced += 1;
       state.session.practiced += 1;
       state.countedCurrentWord = true;
-      if (outcome !== "notMood") {
+      if (outcome !== "notMood" && outcome !== "helped") {
         current.daily.rewardWords += 1;
       }
       return true;
@@ -1081,6 +1103,13 @@
         state.feedback = "No problem. Next one.";
       }
 
+      if (outcome === "helped") {
+        stats.helped += 1;
+        stats.last = "helped";
+        state.feedback = "Nice repeat. We'll practice it again.";
+        state.session.reviewTouched.add(item.word);
+      }
+
       saveStore();
     }
 
@@ -1096,10 +1125,12 @@
       state.choiceFor = null;
       state.listenWrongCount = 0;
       state.countedCurrentWord = false;
-      state.feedback = state.mode === "look" ? "Your turn." : "Listen and choose.";
+      state.repeatStep = "listen";
+      state.feedback = state.mode === "look" ? "Your turn." : feedbackForMode(state.mode);
+      cachedChoices = [];
       preloadUpcomingImages();
       render();
-      if (state.mode === "listen") {
+      if (state.mode === "listen" || state.mode === "repeat") {
         setTimeout(playCurrentSound, 240);
       }
     }
@@ -1115,7 +1146,7 @@
       } else {
         const selected = WORDS.find((word) => word.id === wordId);
         recordListenWrongChoice(selected);
-        playWordSound(selected);
+        playWordOnce(selected);
       }
     }
 
@@ -1149,10 +1180,10 @@
       render();
     }
 
-    function listenChoices() {
+    function choiceOptions(count) {
       const item = currentWord();
       if (!item) return [];
-      const others = shuffle(WORDS.filter((word) => word.id !== item.id)).slice(0, LISTEN_CHOICE_COUNT - 1);
+      const others = shuffle(WORDS.filter((word) => word.id !== item.id)).slice(0, count - 1);
       return shuffle([item, ...others]);
     }
 
@@ -1160,10 +1191,20 @@
     const preloadedImageSrcs = new Set();
     let fullLibraryPreloadStarted = false;
 
-    function refreshChoices() {
-      cachedChoices = listenChoices();
+    function refreshChoices(count = LISTEN_CHOICE_COUNT) {
+      cachedChoices = choiceOptions(count);
       state.choiceFor = currentWord() ? currentWord().id : null;
       preloadImageItems(cachedChoices, { priority: "high" });
+    }
+
+    function startRepeatQuiz() {
+      state.repeatStep = "quiz";
+      state.selectedChoice = null;
+      state.choiceFor = null;
+      state.listenWrongCount = 0;
+      cachedChoices = [];
+      state.feedback = "Find the picture.";
+      render();
     }
 
     function endSession() {
@@ -1184,15 +1225,17 @@
       if (!text || !("speechSynthesis" in window)) return false;
       window.speechSynthesis.cancel();
       const voice = getEnglishVoice();
-      const repeat = options.repeat || 1;
-      for (let i = 0; i < repeat; i += 1) {
+      const rates = Array.isArray(options.rates) && options.rates.length
+        ? options.rates
+        : [options.rate ?? WORD_SLOW_RATE];
+      rates.forEach((rate) => {
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = "en-US";
-        utterance.rate = options.rate || WORD_SPEECH_RATE;
-        utterance.pitch = options.pitch || 1.08;
+        utterance.rate = rate;
+        utterance.pitch = options.pitch ?? 1.08;
         if (voice) utterance.voice = voice;
         window.speechSynthesis.speak(utterance);
-      }
+      });
       return true;
     }
 
@@ -1202,16 +1245,20 @@
 
     function speakFeedback(type) {
       const phrases = type === "correct" ? CORRECT_FEEDBACK : WRONG_FEEDBACK;
-      speakText(randomFrom(phrases), { rate: WORD_SPEECH_RATE, pitch: 1.16 });
+      speakText(randomFrom(phrases), { rate: FEEDBACK_RATE, pitch: 1.16 });
     }
 
     function playWordSound(wordOrItem, options = {}) {
       const text = typeof wordOrItem === "string" ? wordOrItem : wordOrItem && wordOrItem.word;
       return speakText(text, {
-        rate: options.rate || WORD_SPEECH_RATE,
-        pitch: options.pitch || 1.05,
-        repeat: options.repeat || 1
+        rates: options.rates || WORD_SPEECH_SEQUENCE,
+        pitch: options.pitch ?? 1.05
       });
+    }
+
+    function playWordOnce(wordOrItem, options = {}) {
+      const rate = options.rate ?? WORD_SLOW_RATE;
+      return playWordSound(wordOrItem, { rates: [rate], pitch: options.pitch ?? 1.05 });
     }
 
     function playCurrentSound(options = {}) {
@@ -1416,6 +1463,11 @@
             <strong>Listen & Choose</strong>
             <span class="muted">Hear the word. Pick the picture.</span>
           </button>
+          <button type="button" class="mode-button" data-action="start-repeat">
+            <span class="big-icon" aria-hidden="true">🎙️</span>
+            <strong>Listen & Repeat</strong>
+            <span class="muted">Listen. Say it. Then find it.</span>
+          </button>
         </div>
 
         <div class="toolbar small-section">
@@ -1452,6 +1504,7 @@
         <div class="action-grid">
           <button type="button" class="primary" data-action="look-correct">Correct</button>
           <button type="button" class="accent" data-action="look-try">Try Again</button>
+          <button type="button" class="soft" data-action="look-helped">Helped</button>
           <button type="button" class="soft" data-action="look-skip">Skip</button>
           <button type="button" class="soft" data-action="look-notmood">Not in mood</button>
           <button type="button" class="soft" data-action="next">Next</button>
@@ -1495,6 +1548,66 @@
       `);
     }
 
+    function renderRepeat() {
+      const item = currentWord();
+      if (!item) return renderHome();
+      const progress = Math.round(((state.index + 1) / state.queue.length) * 100);
+      if (state.repeatStep === "quiz") {
+        if (!cachedChoices.length || state.choiceFor !== item.id) {
+          refreshChoices(REPEAT_CHOICE_COUNT);
+        }
+        return shell(`
+          <div class="progress-line">
+            <span>Listen & Repeat</span>
+            <span>${state.index + 1} / ${state.queue.length}</span>
+          </div>
+          <div class="meter" aria-label="Progress"><div class="meter-fill" style="width:${progress}%"></div></div>
+          <div class="toolbar small-section">
+            <button type="button" class="primary" data-action="play-sound">Play Sound</button>
+            <button type="button" class="soft" data-action="repeat-skip">Skip</button>
+            <button type="button" class="soft" data-action="end-session">End Session</button>
+          </div>
+          <div class="choice-grid three-choice">
+            ${cachedChoices.map((choice) => {
+              let status = "";
+              if (state.selectedChoice === choice.id && choice.id === item.id) status = "correct";
+              if (state.selectedChoice === choice.id && choice.id !== item.id) status = "needs-try";
+              return `
+                <button type="button" class="choice ${status}" data-action="choose" data-word="${choice.id}" aria-label="${choice.word}">
+                  ${wordVisual(choice)}
+                  ${choiceLabel(choice)}
+                </button>
+              `;
+            }).join("")}
+          </div>
+          <p class="result">${state.feedback}</p>
+        `);
+      }
+      return shell(`
+        <div class="progress-line">
+          <span>Listen & Repeat</span>
+          <span>${state.index + 1} / ${state.queue.length}</span>
+        </div>
+        <div class="meter" aria-label="Progress"><div class="meter-fill" style="width:${progress}%"></div></div>
+        <div class="toolbar small-section">
+          <button type="button" class="primary" data-action="play-sound">Play Sound</button>
+          <button type="button" class="soft" data-action="repeat-skip">Skip</button>
+          <button type="button" class="soft" data-action="end-session">End Session</button>
+        </div>
+        <div class="word-card">
+          <div>
+            ${wordVisual(item)}
+            ${wordLabel(item)}
+            <div class="category-line">${item.scene} · ${item.category}</div>
+          </div>
+        </div>
+        <div class="toolbar" style="justify-content:center;">
+          <button type="button" class="primary" data-action="repeat-said">I said it</button>
+        </div>
+        <p class="result">${state.feedback}</p>
+      `);
+    }
+
     function renderSummary() {
       const review = [...state.session.reviewTouched].slice(0, 6);
       return shell(`
@@ -1516,6 +1629,7 @@
             <button type="button" class="primary" data-action="home">Come back next time</button>
             <button type="button" class="soft" data-action="start-look">Look & Say</button>
             <button type="button" class="soft" data-action="start-listen">Listen & Choose</button>
+            <button type="button" class="soft" data-action="start-repeat">Listen & Repeat</button>
           </div>
         </div>
       `);
@@ -1622,10 +1736,11 @@
     }
 
     function render() {
-      if (state.view !== "listen") cachedChoices = [];
+      if (state.view !== "listen" && state.view !== "repeat") cachedChoices = [];
       if (state.view === "home") app.innerHTML = renderHome();
       if (state.view === "look") app.innerHTML = renderLook();
       if (state.view === "listen") app.innerHTML = renderListen();
+      if (state.view === "repeat") app.innerHTML = renderRepeat();
       if (state.view === "summary") app.innerHTML = renderSummary();
       if (state.view === "skins") app.innerHTML = renderSkins();
       if (state.view === "progress") app.innerHTML = renderProgress();
@@ -1643,6 +1758,7 @@
         cachedChoices = [];
         startMode("listen");
       }
+      if (action === "start-repeat") startMode("repeat");
       if (action === "home") {
         state.view = "home";
         state.feedback = "";
@@ -1658,10 +1774,16 @@
       }
       if (action === "skin") unlockOrUseSkin(button.dataset.skin);
       if (action === "reset") resetCurrentPlayer();
-      if (action === "play-sound") playCurrentSound({ repeat: 3 });
+      if (action === "play-sound") playCurrentSound();
       if (action === "next") nextWord();
       if (action === "end-session") endSession();
       if (action === "listen-skip") {
+        markWord("skip");
+        render();
+        setTimeout(nextWord, 520);
+      }
+      if (action === "repeat-said") startRepeatQuiz();
+      if (action === "repeat-skip") {
         markWord("skip");
         render();
         setTimeout(nextWord, 520);
@@ -1674,6 +1796,11 @@
       if (action === "look-try") {
         markWord("try");
         render();
+      }
+      if (action === "look-helped") {
+        markWord("helped");
+        render();
+        setTimeout(nextWord, 620);
       }
       if (action === "look-skip") {
         markWord("skip");
